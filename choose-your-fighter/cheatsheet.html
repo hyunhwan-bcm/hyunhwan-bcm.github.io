@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All 1024 Combinations - Choose Your AI Fighter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 30px 0 10px;
+  }
+  .header h1 {
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p { margin-top: 8px; color: #888; font-size: 0.95rem; }
+
+  .back-link {
+    display: inline-block;
+    color: #4d96ff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    border-bottom: 1px dashed #4d96ff44;
+  }
+  .back-link:hover { color: #6bcb77; }
+
+  /* ── Section headers ── */
+  .section-title {
+    font-family: 'Bangers', cursive;
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+    color: #ffd93d;
+    margin: 40px 0 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #ffd93d22;
+  }
+  .section-desc {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* ── Formula ── */
+  .formula-box {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 20px 25px;
+    margin-bottom: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 2;
+    border-left: 4px solid #4d96ff;
+    overflow-x: auto;
+  }
+  .formula-box .op { color: #ff6b6b; }
+  .formula-box .var { color: #6bcb77; }
+  .formula-box .eq { color: #ffd93d; }
+  .formula-box .comment { color: #555; }
+
+  /* ── Distribution chart ── */
+  .chart-container {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 30px;
+  }
+  .chart-bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 10px;
+  }
+  .chart-label {
+    width: 220px;
+    min-width: 220px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ccc;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chart-bar-bg {
+    flex: 1;
+    background: #0f0f1a;
+    border-radius: 6px;
+    height: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    transition: width 1s ease;
+  }
+  .chart-bar-img {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: cover;
+  }
+  .chart-count {
+    width: 50px;
+    min-width: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffd93d;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Type gallery ── */
+  .type-gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+  .type-card {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  .type-card:hover { transform: translateY(-3px); }
+  .type-card.selected { border-color: #ffd93d; box-shadow: 0 0 20px rgba(255,217,61,0.2); }
+  .type-card img {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 6px;
+  }
+  .type-card .card-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #ddd;
+  }
+  .type-card .card-index {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  /* ── Combinations table ── */
+  .combo-section {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  .combo-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ffffff11;
+  }
+  .combo-info img { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; }
+  .combo-info-text h3 {
+    font-family: 'Bangers', cursive;
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+  }
+  .combo-info-text p { color: #888; font-size: 0.85rem; margin-top: 4px; }
+
+  .combo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+  }
+  .combo-grid::-webkit-scrollbar { width: 6px; }
+  .combo-grid::-webkit-scrollbar-track { background: #0f0f1a; border-radius: 3px; }
+  .combo-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  .combo-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    background: #0f0f1a;
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-align: center;
+    color: #999;
+  }
+  .combo-cell .yes { color: #6bcb77; }
+  .combo-cell .no { color: #ff6b6b; }
+
+  /* ── 1024 heatmap ── */
+  .heatmap-container {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+  }
+  .heatmap-info {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 15px;
+  }
+  .heatmap {
+    display: grid;
+    grid-template-columns: repeat(64, 1fr);
+    gap: 1px;
+  }
+  .hm-cell {
+    aspect-ratio: 1;
+    border-radius: 1px;
+    cursor: pointer;
+    min-width: 6px;
+    transition: transform 0.1s;
+  }
+  .hm-cell:hover { transform: scale(2); z-index: 10; position: relative; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 15px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    color: #aaa;
+  }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Tooltip ── */
+  #tooltip {
+    display: none;
+    position: fixed;
+    background: #1a1a2e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: #ddd;
+    z-index: 100;
+    max-width: 300px;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #tooltip strong { color: #ffd93d; }
+  #tooltip .tt-combo { font-family: 'JetBrains Mono', monospace; color: #6bcb77; }
+
+  .footer {
+    text-align: center;
+    padding: 30px 0 20px;
+    color: #444;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 700px) {
+    .header h1 { font-size: 1.8rem; }
+    .type-gallery { grid-template-columns: repeat(2, 1fr); }
+    .chart-label { width: 120px; min-width: 120px; font-size: 0.65rem; }
+    .heatmap { grid-template-columns: repeat(32, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<div class="container">
+  <div class="header">
+    <h1>ALL 1024 COMBINATIONS</h1>
+    <p>Every possible answer pattern and which AI archetype it maps to</p>
+  </div>
+
+  <a class="back-link" href="index.html">&larr; Back to Quiz</a>
+
+  <!-- ── Formula ── -->
+  <div class="section-title">THE MAPPING FORMULA</div>
+  <div class="section-desc">
+    We use a XOR-based linear map over GF(2) to compute a 4-bit type index from 10 binary answers.
+    Since the map has rank 4, the kernel has dimension 6, guaranteeing exactly 2<sup>6</sup> = 64 answer
+    patterns per type. This is mathematically provable, not empirical.
+  </div>
+  <div class="formula-box">
+    <span class="comment">// 10 yes/no answers &rarr; 4-bit type index (0-15)</span><br>
+    <span class="var">bit<sub>0</sub></span> <span class="eq">=</span> Q1 <span class="op">XOR</span> Q5 <span class="op">XOR</span> Q9<br>
+    <span class="var">bit<sub>1</sub></span> <span class="eq">=</span> Q2 <span class="op">XOR</span> Q6 <span class="op">XOR</span> Q10<br>
+    <span class="var">bit<sub>2</sub></span> <span class="eq">=</span> Q3 <span class="op">XOR</span> Q7<br>
+    <span class="var">bit<sub>3</sub></span> <span class="eq">=</span> Q4 <span class="op">XOR</span> Q8<br><br>
+    <span class="var">type_index</span> <span class="eq">=</span> (<span class="var">bit<sub>3</sub></span> &lt;&lt; 3) | (<span class="var">bit<sub>2</sub></span> &lt;&lt; 2) | (<span class="var">bit<sub>1</sub></span> &lt;&lt; 1) | <span class="var">bit<sub>0</sub></span>
+  </div>
+
+  <!-- ── Distribution chart ── -->
+  <div class="section-title">DISTRIBUTION CHART</div>
+  <div class="section-desc">Each of the 16 types maps to exactly 64 out of 1024 combinations (6.25%). Perfectly even.</div>
+  <div class="chart-container" id="chart-container"></div>
+
+  <!-- ── Heatmap ── -->
+  <div class="section-title">1024 COMBINATIONS HEATMAP</div>
+  <div class="section-desc">Each cell represents one of the 1024 answer patterns (0-1023). Color = assigned type. Hover to see details.</div>
+  <div class="legend" id="heatmap-legend"></div>
+  <div class="heatmap-container">
+    <div class="heatmap" id="heatmap"></div>
+  </div>
+
+  <!-- ── Type gallery ── -->
+  <div class="section-title">EXPLORE BY TYPE</div>
+  <div class="section-desc">Click a type to see all 64 answer combinations that produce it.</div>
+  <div class="type-gallery" id="type-gallery"></div>
+
+  <!-- ── Combo detail ── -->
+  <div id="combo-section" class="combo-section" style="display:none;"></div>
+
+  <div class="footer">
+    <a class="back-link" href="index.html">&larr; Take the Quiz</a><br><br>
+    All 1024 answer combinations evenly distributed across 16 types &bull; XOR linear map over GF(2)
+  </div>
+</div>
+
+<script>
+const TYPES = [
+  { name: "The GPU Peasant Wizard", img: "images/type-00.png", color: "#c9a0dc" },
+  { name: "The Enterprise Java Oracle", img: "images/type-01.png", color: "#7eb8da" },
+  { name: "The Moltbot Life-Automator", img: "images/type-02.png", color: "#f4a460" },
+  { name: "The Toolcall Gremlin", img: "images/type-03.png", color: "#5cb85c" },
+  { name: "The Vibecoder Comet", img: "images/type-04.png", color: "#e74c3c" },
+  { name: "The Research Paper Cosplayer", img: "images/type-05.png", color: "#8e6f47" },
+  { name: "The Prompt Poet (Dark Arts)", img: "images/type-06.png", color: "#9b59b6" },
+  { name: "The Security Paranoid Monk", img: "images/type-07.png", color: "#607d8b" },
+  { name: "The Python Notebook Alchemist", img: "images/type-08.png", color: "#f39c12" },
+  { name: "The TypeScript Child of Destiny", img: "images/type-09.png", color: "#3178c6" },
+  { name: "The LLM Evaluation Nerd", img: "images/type-10.png", color: "#27ae60" },
+  { name: "The Model Polygamist", img: "images/type-11.png", color: "#e67e22" },
+  { name: "The 'I Don't Need AI' Boomer", img: "images/type-12.png", color: "#95a5a6" },
+  { name: "The Startup Founder LARPer", img: "images/type-13.png", color: "#e84393" },
+  { name: "The Claude Skills Grifter", img: "images/type-14.png", color: "#00b894" },
+  { name: "The RAG Hoarder", img: "images/type-15.png", color: "#6c5ce7" }
+];
+
+const QUESTIONS_SHORT = ["Q1:Layers", "Q2:Bots", "Q3:Ship", "Q4:Docs", "Q5:Prompt", "Q6:Local", "Q7:Tools", "Q8:Types", "Q9:Notebook", "Q10:Bench"];
+
+function getTypeIndex(ans) {
+  const bit0 = ans[0] ^ ans[4] ^ ans[8];
+  const bit1 = ans[1] ^ ans[5] ^ ans[9];
+  const bit2 = ans[2] ^ ans[6];
+  const bit3 = ans[3] ^ ans[7];
+  return (bit3 << 3) | (bit2 << 2) | (bit1 << 1) | bit0;
+}
+
+// Precompute all 1024 mappings
+const allMappings = [];
+const typeCombos = Array.from({length: 16}, () => []);
+for (let i = 0; i < 1024; i++) {
+  const answers = [];
+  for (let bit = 0; bit < 10; bit++) answers.push((i >> bit) & 1);
+  const idx = getTypeIndex(answers);
+  allMappings.push({ pattern: i, answers, typeIdx: idx });
+  typeCombos[idx].push({ pattern: i, answers });
+}
+
+// ── Distribution chart ──
+function renderChart() {
+  const container = document.getElementById('chart-container');
+  container.innerHTML = TYPES.map((t, i) => {
+    const count = typeCombos[i].length;
+    const pct = (count / 1024 * 100).toFixed(1);
+    return `<div class="chart-bar-row">
+      <span class="chart-label">${t.name}</span>
+      <img class="chart-bar-img" src="${t.img}" alt="">
+      <div class="chart-bar-bg">
+        <div class="chart-bar-fill" style="width:${pct}%;background:${t.color}" data-w="${pct}">${pct}%</div>
+      </div>
+      <span class="chart-count">${count}</span>
+    </div>`;
+  }).join('');
+  // Animate bars
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.chart-bar-fill').forEach(el => {
+      const w = el.dataset.w;
+      el.style.width = '0%';
+      requestAnimationFrame(() => { el.style.width = w + '%'; });
+    });
+  });
+}
+
+// ── Heatmap ──
+function renderHeatmap() {
+  const heatmap = document.getElementById('heatmap');
+  const legend = document.getElementById('heatmap-legend');
+
+  // Legend
+  legend.innerHTML = TYPES.map((t, i) =>
+    `<div class="legend-item"><div class="legend-swatch" style="background:${t.color}"></div>${i}: ${t.name.replace('The ', '')}</div>`
+  ).join('');
+
+  // Cells
+  const frags = [];
+  for (const m of allMappings) {
+    frags.push(`<div class="hm-cell" style="background:${TYPES[m.typeIdx].color}" data-i="${m.pattern}" data-t="${m.typeIdx}"></div>`);
+  }
+  heatmap.innerHTML = frags.join('');
+
+  // Tooltip
+  const tooltip = document.getElementById('tooltip');
+  heatmap.addEventListener('mousemove', e => {
+    const cell = e.target.closest('.hm-cell');
+    if (!cell) { tooltip.style.display = 'none'; return; }
+    const i = parseInt(cell.dataset.i);
+    const t = parseInt(cell.dataset.t);
+    const m = allMappings[i];
+    const ansStr = m.answers.map((a, qi) =>
+      `<span class="${a ? 'yes' : 'no'}">${QUESTIONS_SHORT[qi].split(':')[0]}:${a ? 'Y' : 'N'}</span>`
+    ).join(' ');
+    tooltip.innerHTML = `<strong>${TYPES[t].name}</strong><br>Pattern #${i} (${i.toString(2).padStart(10, '0')})<br><span class="tt-combo">${ansStr}</span>`;
+    tooltip.style.display = 'block';
+    tooltip.style.left = Math.min(e.clientX + 15, window.innerWidth - 320) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+  });
+  heatmap.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+}
+
+// ── Type gallery ──
+let selectedType = null;
+function renderGallery() {
+  const gallery = document.getElementById('type-gallery');
+  gallery.innerHTML = TYPES.map((t, i) =>
+    `<div class="type-card" data-idx="${i}" onclick="selectType(${i})" style="background:${t.color}11">
+       <img src="${t.img}" alt="${t.name}" loading="lazy">
+       <div class="card-name">${t.name.replace('The ', '')}</div>
+       <div class="card-index">#${i} &bull; ${typeCombos[i].length} combos</div>
+     </div>`
+  ).join('');
+}
+
+function selectType(idx) {
+  selectedType = idx;
+  // Highlight card
+  document.querySelectorAll('.type-card').forEach((c, i) => {
+    c.classList.toggle('selected', i === idx);
+  });
+  // Show combos
+  const section = document.getElementById('combo-section');
+  const t = TYPES[idx];
+  const combos = typeCombos[idx];
+
+  section.style.display = 'block';
+  section.innerHTML = `
+    <div class="combo-info">
+      <img src="${t.img}" alt="${t.name}">
+      <div class="combo-info-text">
+        <h3 style="color:${t.color}">${t.name}</h3>
+        <p>${combos.length} answer combinations produce this type</p>
+      </div>
+    </div>
+    <div class="combo-grid">
+      ${combos.map(c => {
+        const bits = c.answers.map((a, qi) =>
+          `<span class="${a ? 'yes' : 'no'}">${a ? 'Y' : 'N'}</span>`
+        ).join('');
+        return `<div class="combo-cell">#${c.pattern}<br>${bits}</div>`;
+      }).join('')}
+    </div>
+  `;
+  section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Init ──
+renderChart();
+renderHeatmap();
+renderGallery();
+</script>
+
+</body>
+</html>
