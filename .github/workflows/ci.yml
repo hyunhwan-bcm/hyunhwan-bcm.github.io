@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate-html:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking choose-your-fighter/index.html..."
+          test -f choose-your-fighter/index.html
+          echo "PASS: choose-your-fighter/index.html exists"
+
+      - name: Validate HTML structure
+        run: |
+          FILE="choose-your-fighter/index.html"
+          echo "Validating HTML structure of $FILE..."
+
+          grep -q '<!DOCTYPE html>' "$FILE" && echo "PASS: DOCTYPE found" || { echo "FAIL: missing DOCTYPE"; exit 1; }
+          grep -q '<html' "$FILE" && echo "PASS: <html> tag found" || { echo "FAIL: missing <html>"; exit 1; }
+          grep -q '</html>' "$FILE" && echo "PASS: </html> closing tag found" || { echo "FAIL: missing </html>"; exit 1; }
+          grep -q '<head>' "$FILE" && echo "PASS: <head> found" || { echo "FAIL: missing <head>"; exit 1; }
+          grep -q '<body>' "$FILE" && echo "PASS: <body> found" || { echo "FAIL: missing <body>"; exit 1; }
+          grep -q '<title>' "$FILE" && echo "PASS: <title> found" || { echo "FAIL: missing <title>"; exit 1; }
+          grep -q 'meta.*viewport' "$FILE" && echo "PASS: viewport meta found" || { echo "FAIL: missing viewport meta"; exit 1; }
+
+          echo "All HTML structure checks passed."
+
+  verify-distribution:
+    name: Verify Quiz Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run distribution verification
+        run: python verify_distribution.py
+
+  test-quiz-logic:
+    name: Test Quiz Logic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run quiz logic tests
+        run: node test_quiz.mjs

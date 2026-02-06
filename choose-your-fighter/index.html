@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choose Your AI Fighter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 40px 0 30px;
+  }
+  .header h1 {
+    font-family: 'Bangers', cursive;
+    font-size: 3rem;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+  .header p {
+    margin-top: 10px;
+    color: #888;
+    font-size: 1.05rem;
+  }
+
+  /* ── Progress bar ── */
+  .progress-container {
+    width: 100%;
+    background: #1a1a2e;
+    border-radius: 20px;
+    height: 10px;
+    margin: 20px 0 30px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4d96ff, #6bcb77);
+    border-radius: 20px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .progress-text {
+    text-align: center;
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  /* ── Question card ── */
+  .question-card {
+    background: #1a1a2e;
+    border-radius: 20px;
+    padding: 40px 30px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.4s ease;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4d96ff, #6bcb77, #ffd93d, #ff6b6b);
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .question-number {
+    font-family: 'Bangers', cursive;
+    font-size: 1.1rem;
+    color: #4d96ff;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+  }
+  .question-text {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-bottom: 35px;
+    color: #f0f0f0;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+  }
+  .btn {
+    padding: 16px 50px;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-yes {
+    background: linear-gradient(135deg, #6bcb77, #4d96ff);
+    color: #fff;
+  }
+  .btn-yes:hover { box-shadow: 0 0 25px rgba(107, 203, 119, 0.4); }
+  .btn-no {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: #fff;
+  }
+  .btn-no:hover { box-shadow: 0 0 25px rgba(255, 107, 107, 0.4); }
+
+  /* ── Result card ── */
+  .result-card {
+    text-align: center;
+    animation: slideIn 0.5s ease;
+  }
+  .result-label {
+    font-size: 1rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+  .result-name {
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  .result-portrait {
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 25px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5rem;
+    position: relative;
+    overflow: hidden;
+    border: 4px solid rgba(255,255,255,0.15);
+  }
+  .result-portrait .portrait-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.25;
+  }
+  .result-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 25px;
+  }
+  .trait-badge {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    color: #ccc;
+  }
+  .result-description {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 25px;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #bbb;
+    margin-bottom: 30px;
+    text-align: left;
+  }
+  .result-description strong { color: #f0f0f0; }
+
+  .btn-restart {
+    background: #1a1a2e;
+    border: 2px solid #4d96ff;
+    color: #4d96ff;
+    padding: 14px 40px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-restart:hover {
+    background: #4d96ff;
+    color: #fff;
+  }
+
+  .btn-share {
+    background: linear-gradient(135deg, #6bcb77, #4d96ff);
+    border: none;
+    color: #fff;
+    padding: 14px 40px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 10px;
+  }
+  .btn-share:hover { box-shadow: 0 0 25px rgba(107,203,119,0.4); }
+
+  /* ── Grid preview (shown on start) ── */
+  .start-screen { text-align: center; }
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 30px 0;
+  }
+  .type-cell {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 12px 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #ccc;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
+  .type-cell:hover {
+    border-color: #4d96ff;
+    transform: translateY(-2px);
+  }
+  .type-cell .cell-emoji { font-size: 1.8rem; display: block; margin-bottom: 5px; }
+  .type-cell .cell-name { line-height: 1.3; }
+
+  .btn-start {
+    background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+    border: none;
+    color: #1a1a2e;
+    padding: 18px 60px;
+    border-radius: 16px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    margin-top: 10px;
+  }
+  .btn-start:hover { box-shadow: 0 0 35px rgba(255,217,61,0.4); transform: scale(1.03); }
+
+  .hidden { display: none !important; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    color: #444;
+    font-size: 0.8rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .header h1 { font-size: 2.2rem; }
+    .question-text { font-size: 1.15rem; }
+    .btn { padding: 14px 35px; font-size: 1rem; }
+    .type-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .result-name { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>CHOOSE YOUR AI FIGHTER</h1>
+    <p>Answer 10 questions to discover your AI personality archetype</p>
+  </div>
+
+  <!-- ── Start screen ── -->
+  <div id="start-screen" class="start-screen">
+    <div class="type-grid" id="type-grid"></div>
+    <button class="btn-start" onclick="startQuiz()">START THE QUIZ</button>
+  </div>
+
+  <!-- ── Quiz screen ── -->
+  <div id="quiz-screen" class="hidden">
+    <div class="progress-text" id="progress-text">Question 1 of 10</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="question-card" id="question-card">
+      <div class="question-number" id="question-number">QUESTION 1</div>
+      <div class="question-text" id="question-text"></div>
+      <div class="buttons">
+        <button class="btn btn-yes" onclick="answer(1)">YES</button>
+        <button class="btn btn-no" onclick="answer(0)">NO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Result screen ── -->
+  <div id="result-screen" class="hidden result-card"></div>
+
+  <div class="footer">
+    Based on the legendary 4&times;4 AI user archetype meme &bull;
+    All 1024 answer combinations evenly distributed across 16 types
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────
+// DATA
+// ─────────────────────────────────────
+const TYPES = [
+  {
+    name: "The GPU Peasant Wizard",
+    emoji: "\u{1F9D9}\u200D\u2642\uFE0F",
+    color: "#c9a0dc",
+    traits: ["Local LLM Enthusiast", "Fan Noise Connoisseur", "2 tokens/sec Mindfulness"],
+    desc: "You run a <strong>70B parameter model</strong> on your gaming laptop while it sounds like a jet engine preparing for takeoff. You call the glacial 2 tokens/sec output \"mindful computing\" and insist the latency gives you time to <strong>really think about the response</strong>. Your electricity bill is a state secret."
+  },
+  {
+    name: "The Enterprise Java Oracle",
+    emoji: "\u{1F3DB}\uFE0F",
+    color: "#7eb8da",
+    traits: ["Architecture Astronaut", "Layer Enthusiast", "14-Page Doc Writer"],
+    desc: "You write a <strong>14-page Confluence doc</strong> to ask the model for a one-liner. Your prompts are refactored into 6 layers: Controller, Service, Repository, DTO, Mapper, and Trauma. You have an \"Architecture Review\" meeting for every AI interaction. <strong>The service layer is non-negotiable.</strong>"
+  },
+  {
+    name: "The Moltbot Life-Automator",
+    emoji: "\u{1F916}",
+    color: "#f4a460",
+    traits: ["Bot Farmer", "Automation Addict", "Fragile Ecosystem Builder"],
+    desc: "You have a bot to wake up, a bot to brush teeth, and a <strong>bot to apologize to friends</strong>. Your entire daily routine is a Rube Goldberg machine of automations. If one bot goes down, you become <strong>catatonic</strong> because you've literally forgotten how to do things manually."
+  },
+  {
+    name: "The Toolcall Gremlin",
+    emoji: "\u{1F47A}",
+    color: "#5cb85c",
+    traits: ["Tool Maximalist", "JSON Whisperer", "Required: True"],
+    desc: "Everything is a tool call. Even asking for water. Your debugging method is to <strong>add 9 more tools</strong>. You've wrapped your coffee maker in a REST API and your therapist is now a function with <code>required: true</code>. The tool calls have tool calls. <strong>It's tool calls all the way down.</strong>"
+  },
+  {
+    name: "The Vibecoder Comet",
+    emoji: "\u{2604}\uFE0F",
+    color: "#e74c3c",
+    traits: ["Ship-First Mentality", "Test Allergic", "Production Debugger"],
+    desc: "You prompt directly in prod. Unit tests? <strong>\"The users will tell us.\"</strong> You deploy with the confidence of someone who has never been on-call at 3 AM. Your code hasn't been reviewed since 2023, and you haven't made a decision on your own since then either. <strong>Move fast, break everything.</strong>"
+  },
+  {
+    name: "The Research Paper Cosplayer",
+    emoji: "\u{1F4DA}",
+    color: "#8e6f47",
+    traits: ["Paper Implementer", "Function Name Poet", "Confident Incorrectness"],
+    desc: "You name functions <code>latent_alignment_regularizer()</code> to feel something. You reimplement papers badly but <strong>with confidence</strong>. Your code is full of Greek letters and your README cites 47 arXiv papers. Nobody understands your code, including you, but it looks <strong>very academic.</strong>"
+  },
+  {
+    name: "The Prompt Poet (Dark Arts)",
+    emoji: "\u{1F52E}",
+    color: "#9b59b6",
+    traits: ["Prompt Artisan", "Spell Writer", "Hallucination Warden"],
+    desc: "You don't write code, you <strong>write spells</strong>. You've added \"DO NOT HALLUCINATE\" 47 times like it's a seatbelt. Your prompts are indistinguishable from ancient incantations, and you believe the exact wording of your system prompt affects <strong>the cosmic alignment of the tokens.</strong>"
+  },
+  {
+    name: "The Security Paranoid Monk",
+    emoji: "\u{1F6E1}\uFE0F",
+    color: "#607d8b",
+    traits: ["Token Inspector", "Redaction Expert", "Fun Eliminator"],
+    desc: "You treat every token like it's <strong>radioactive</strong>. You redact the prompt, the output, and the concept of fun. Your AI conversations go through 7 proxy layers and you've written a custom tokenizer just to inspect what's being sent. <strong>Trust no model. Trust no token.</strong>"
+  },
+  {
+    name: "The Python Notebook Alchemist",
+    emoji: "\u{1F9EA}",
+    color: "#f39c12",
+    traits: ["Notebook Dweller", "Hidden State Sorcerer", "FINAL_v23 Expert"],
+    desc: "Your production system is a notebook named <strong>FINAL_v23_REAL.py</strong>. State lives in vibes and hidden globals. You run cells out of order and call it \"exploration.\" The notebook has 847 cells and the output of cell 12 depends on cell 340. <strong>Only you can run it. Sometimes.</strong>"
+  },
+  {
+    name: "The TypeScript Child of Destiny",
+    emoji: "\u{1F476}",
+    color: "#3178c6",
+    traits: ["Type Zealot", "Browser Inception", "Generics Philosopher"],
+    desc: "You build an AI IDE inside a browser inside another browser. You cry at \"Type instantiation is <strong>excessively deep</strong>\" errors. Your type definitions are longer than your actual code, and you've spent 3 days on a generic type that makes <code>Pick&lt;Omit&lt;Partial&lt;T&gt;&gt;&gt;</code> look simple."
+  },
+  {
+    name: "The LLM Evaluation Nerd",
+    emoji: "\u{1F4CA}",
+    color: "#27ae60",
+    traits: ["Benchmark Collector", "Rubric Architect", "Deploy Blocker"],
+    desc: "You won't deploy until it beats <strong>12 datasets and 3 rubrics</strong>. You have a spreadsheet for the spreadsheet. Your eval suite takes longer to run than training the model. You've rejected production-ready models because they scored 94.7 instead of 94.8 on <strong>your custom rubric 3.2.</strong>"
+  },
+  {
+    name: "The Model Polygamist",
+    emoji: "\u{1F465}",
+    color: "#e67e22",
+    traits: ["Multi-Model Juggler", "Blame Router", "Cosmic Ray Debugger"],
+    desc: "You rotate between <strong>4 AIs</strong> like a cheating boyfriend who thinks he's running an \"optimization experiment.\" Push broken code, blame Claude. Revert, blame Gemini. Revert again, blame <strong>\"cosmic rays.\"</strong> Ship anyway. Your git log is a crime scene of model-hopping."
+  },
+  {
+    name: "The 'I Don't Need AI' Boomer",
+    emoji: "\u{1F474}",
+    color: "#95a5a6",
+    traits: ["AI Denier", "Google Veteran", "Autocomplete Rebrander"],
+    desc: "You call agents \"cheating\" while Googling for 3 hours. You eventually use AI but call it <strong>\"autocomplete.\"</strong> You say \"real engineers don't need AI\" from behind a stack of StackOverflow tabs. When the AI writes better code than you, it's because <strong>the problem was trivial anyway.</strong>"
+  },
+  {
+    name: "The Startup Founder LARPer",
+    emoji: "\u{1F454}",
+    color: "#e84393",
+    traits: ["Pitch Deck Artist", "Platform Visionary", "MVP Theorist"],
+    desc: "You pitch: \"It's like Uber but for prompts.\" You have no product, only a <strong>Notion board and a logo</strong>. Your slide deck is 90% arrows and the word <strong>\"PLATFORM\"</strong> in bold. The MVP is perpetually TBD. You've pivoted 6 times but the LinkedIn bio still says \"serial entrepreneur.\""
+  },
+  {
+    name: "The Claude Skills Grifter",
+    emoji: "\u{1F3AD}",
+    color: "#00b894",
+    traits: ["Skill Crafter", "Esoteric Sigil Writer", "Grind Philosopher"],
+    desc: "You write skills so esoteric they're basically <strong>sigils</strong>. \"How to make Claude write git commits in Shakespearean English while maintaining semantic versioning.\" 200 likes from people who will never use this. The grind continues. <strong>The people needed this.</strong>"
+  },
+  {
+    name: "The RAG Hoarder",
+    emoji: "\u{1F4E6}",
+    color: "#6c5ce7",
+    traits: ["Context Maximalist", "Embedding Evangelist", "Downloads Folder Uploader"],
+    desc: "You upload your entire Downloads folder and call it <strong>\"context.\"</strong> You say \"bro it's in the embeddings\" for everything. Your vector DB has your tax returns, vacation photos, and a PDF of your grandma's cookie recipe. If it exists, it must be <strong>embedded and retrievable.</strong>"
+  }
+];
+
+const QUESTIONS = [
+  "Do you believe adding more abstraction layers always makes code better?",
+  "Have you automated at least 3 parts of your daily routine with scripts or bots?",
+  "Do you prefer shipping fast over writing tests?",
+  "Do you regularly upload large amounts of documents as context for AI tools?",
+  "Do you spend more time crafting the perfect prompt than writing actual code?",
+  "Have you ever run a large language model locally on your own hardware?",
+  "Is your first instinct to reach for a tool or plugin rather than write code from scratch?",
+  "Do you think strong typing and strict type systems prevent most real-world bugs?",
+  "Do you prefer working in notebooks (Jupyter, Colab) over traditional editors/IDEs?",
+  "Do you formally benchmark or evaluate AI models before choosing which one to use?"
+];
+
+// ─────────────────────────────────────
+// QUIZ LOGIC
+// ─────────────────────────────────────
+let currentQ = 0;
+let answers = [];
+
+function getTypeIndex(ans) {
+  // XOR-based linear map → 4-bit index (guaranteed even distribution)
+  const bit0 = ans[0] ^ ans[4] ^ ans[8];
+  const bit1 = ans[1] ^ ans[5] ^ ans[9];
+  const bit2 = ans[2] ^ ans[6];
+  const bit3 = ans[3] ^ ans[7];
+  return (bit3 << 3) | (bit2 << 2) | (bit1 << 1) | bit0;
+}
+
+function renderStartScreen() {
+  const grid = document.getElementById('type-grid');
+  grid.innerHTML = TYPES.map(t =>
+    `<div class="type-cell" style="background:${t.color}22;border-color:${t.color}44">
+       <span class="cell-emoji">${t.emoji}</span>
+       <span class="cell-name">${t.name.replace('The ', '')}</span>
+     </div>`
+  ).join('');
+}
+
+function startQuiz() {
+  currentQ = 0;
+  answers = [];
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.remove('hidden');
+  showQuestion();
+}
+
+function showQuestion() {
+  const card = document.getElementById('question-card');
+  card.style.animation = 'none';
+  // Force reflow then restart animation
+  void card.offsetHeight;
+  card.style.animation = 'slideIn 0.4s ease';
+
+  document.getElementById('question-number').textContent = `QUESTION ${currentQ + 1}`;
+  document.getElementById('question-text').textContent = QUESTIONS[currentQ];
+  document.getElementById('progress-text').textContent = `Question ${currentQ + 1} of ${QUESTIONS.length}`;
+  document.getElementById('progress-bar').style.width = `${((currentQ) / QUESTIONS.length) * 100}%`;
+}
+
+function answer(val) {
+  answers.push(val);
+  currentQ++;
+  if (currentQ < QUESTIONS.length) {
+    showQuestion();
+  } else {
+    document.getElementById('progress-bar').style.width = '100%';
+    setTimeout(showResult, 400);
+  }
+}
+
+function showResult() {
+  const idx = getTypeIndex(answers);
+  const t = TYPES[idx];
+
+  document.getElementById('quiz-screen').classList.add('hidden');
+  const resultDiv = document.getElementById('result-screen');
+  resultDiv.classList.remove('hidden');
+
+  resultDiv.innerHTML = `
+    <div class="result-label">You are...</div>
+    <div class="result-name" style="color:${t.color}">${t.name}</div>
+    <div class="result-portrait" style="background:${t.color}33">
+      <span>${t.emoji}</span>
+    </div>
+    <div class="result-traits">
+      ${t.traits.map(tr => `<span class="trait-badge">${tr}</span>`).join('')}
+    </div>
+    <div class="result-description">${t.desc}</div>
+    <button class="btn-share" onclick="shareResult('${t.name.replace(/'/g, "\\'")}')">SHARE</button>
+    <button class="btn-restart" onclick="restart()">TRY AGAIN</button>
+  `;
+}
+
+function shareResult(name) {
+  const text = `I'm "${name}" in the Choose Your AI Fighter quiz! Which AI archetype are you?`;
+  if (navigator.share) {
+    navigator.share({ title: 'Choose Your AI Fighter', text: text, url: window.location.href });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text + '\n' + window.location.href);
+    const btn = document.querySelector('.btn-share');
+    btn.textContent = 'COPIED!';
+    setTimeout(() => { btn.textContent = 'SHARE'; }, 2000);
+  }
+}
+
+function restart() {
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+}
+
+// ─────────────────────────────────────
+// INIT
+// ─────────────────────────────────────
+renderStartScreen();
+</script>
+
+</body>
+</html>
