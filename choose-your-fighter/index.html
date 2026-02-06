@@ -26,7 +26,7 @@
   /* ── Header ── */
   .header {
     text-align: center;
-    padding: 40px 0 30px;
+    padding: 40px 0 10px;
   }
   .header h1 {
     font-family: 'Bangers', cursive;
@@ -36,13 +36,44 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: none;
   }
   .header p {
     margin-top: 10px;
     color: #888;
     font-size: 1.05rem;
   }
+
+  /* ── Music control ── */
+  .music-control {
+    text-align: center;
+    margin: 10px 0 5px;
+  }
+  .music-btn {
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .music-btn:hover { border-color: #4d96ff; color: #4d96ff; }
+  .music-btn.playing { border-color: #6bcb77; color: #6bcb77; }
+
+  /* ── Nav links ── */
+  .nav-links {
+    text-align: center;
+    margin: 8px 0 20px;
+  }
+  .nav-links a {
+    color: #4d96ff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-bottom: 1px dashed #4d96ff44;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover { color: #6bcb77; border-color: #6bcb7744; }
 
   /* ── Progress bar ── */
   .progress-container {
@@ -150,22 +181,18 @@
     margin-bottom: 20px;
   }
   .result-portrait {
-    width: 220px;
-    height: 220px;
+    width: 270px;
+    height: 270px;
     margin: 0 auto 25px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 5rem;
-    position: relative;
+    border-radius: 16px;
     overflow: hidden;
     border: 4px solid rgba(255,255,255,0.15);
+    position: relative;
   }
-  .result-portrait .portrait-bg {
-    position: absolute;
-    inset: 0;
-    opacity: 0.25;
+  .result-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   .result-traits {
     display: flex;
@@ -194,6 +221,8 @@
   }
   .result-description strong { color: #f0f0f0; }
 
+  .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
   .btn-restart {
     background: #1a1a2e;
     border: 2px solid #4d96ff;
@@ -205,10 +234,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-  .btn-restart:hover {
-    background: #4d96ff;
-    color: #fff;
-  }
+  .btn-restart:hover { background: #4d96ff; color: #fff; }
 
   .btn-share {
     background: linear-gradient(135deg, #6bcb77, #4d96ff);
@@ -220,9 +246,23 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-right: 10px;
   }
   .btn-share:hover { box-shadow: 0 0 25px rgba(107,203,119,0.4); }
+
+  .btn-cheatsheet {
+    background: none;
+    border: 2px solid #ffd93d;
+    color: #ffd93d;
+    padding: 14px 40px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-block;
+  }
+  .btn-cheatsheet:hover { background: #ffd93d; color: #1a1a2e; }
 
   /* ── Grid preview (shown on start) ── */
   .start-screen { text-align: center; }
@@ -235,20 +275,26 @@
   .type-cell {
     background: #1a1a2e;
     border-radius: 10px;
-    padding: 12px 6px;
-    font-size: 0.7rem;
+    padding: 6px;
+    font-size: 0.65rem;
     font-weight: 600;
     color: #ccc;
     text-align: center;
     border: 2px solid transparent;
     transition: all 0.3s ease;
+    overflow: hidden;
   }
   .type-cell:hover {
     border-color: #4d96ff;
     transform: translateY(-2px);
   }
-  .type-cell .cell-emoji { font-size: 1.8rem; display: block; margin-bottom: 5px; }
-  .type-cell .cell-name { line-height: 1.3; }
+  .type-cell img {
+    width: 100%;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .type-cell .cell-name { line-height: 1.3; display: block; }
 
   .btn-start {
     background: linear-gradient(135deg, #ffd93d, #ff6b6b);
@@ -275,6 +321,9 @@
     font-size: 0.8rem;
   }
 
+  /* ── YouTube player (hidden) ── */
+  #yt-player { position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     .header h1 { font-size: 2.2rem; }
@@ -282,6 +331,7 @@
     .btn { padding: 14px 35px; font-size: 1rem; }
     .type-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
     .result-name { font-size: 2rem; }
+    .result-portrait { width: 220px; height: 220px; }
   }
 </style>
 </head>
@@ -291,6 +341,14 @@
   <div class="header">
     <h1>CHOOSE YOUR AI FIGHTER</h1>
     <p>Answer 10 questions to discover your AI personality archetype</p>
+  </div>
+
+  <div class="music-control">
+    <button class="music-btn" id="music-btn" onclick="toggleMusic()">&#9835; Music: OFF</button>
+  </div>
+
+  <div class="nav-links">
+    <a href="cheatsheet.html">View All 1024 Combinations Cheatsheet &rarr;</a>
   </div>
 
   <!-- ── Start screen ── -->
@@ -324,6 +382,55 @@
   </div>
 </div>
 
+<!-- YouTube IFrame API (for background music) -->
+<div id="yt-player"></div>
+<script>
+  var ytPlayer = null;
+  var musicPlaying = false;
+
+  // Load YouTube IFrame API
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+
+  function onYouTubeIframeAPIReady() {
+    ytPlayer = new YT.Player('yt-player', {
+      height: '1',
+      width: '1',
+      videoId: 'IstvN-NN_9k',
+      playerVars: { autoplay: 0, loop: 1, playlist: 'IstvN-NN_9k' },
+      events: {
+        onReady: function() { /* ready */ },
+        onStateChange: function(e) {
+          if (e.data === YT.PlayerState.ENDED) {
+            ytPlayer.playVideo(); // loop
+          }
+        }
+      }
+    });
+  }
+
+  function toggleMusic() {
+    var btn = document.getElementById('music-btn');
+    if (!ytPlayer || typeof ytPlayer.playVideo !== 'function') {
+      btn.textContent = '\u266B Loading...';
+      setTimeout(toggleMusic, 500);
+      return;
+    }
+    if (musicPlaying) {
+      ytPlayer.pauseVideo();
+      musicPlaying = false;
+      btn.textContent = '\u266B Music: OFF';
+      btn.classList.remove('playing');
+    } else {
+      ytPlayer.playVideo();
+      musicPlaying = true;
+      btn.textContent = '\u266B Music: ON';
+      btn.classList.add('playing');
+    }
+  }
+</script>
+
 <script>
 // ─────────────────────────────────────
 // DATA
@@ -331,112 +438,112 @@
 const TYPES = [
   {
     name: "The GPU Peasant Wizard",
-    emoji: "\u{1F9D9}\u200D\u2642\uFE0F",
+    img: "images/type-00.png",
     color: "#c9a0dc",
     traits: ["Local LLM Enthusiast", "Fan Noise Connoisseur", "2 tokens/sec Mindfulness"],
     desc: "You run a <strong>70B parameter model</strong> on your gaming laptop while it sounds like a jet engine preparing for takeoff. You call the glacial 2 tokens/sec output \"mindful computing\" and insist the latency gives you time to <strong>really think about the response</strong>. Your electricity bill is a state secret."
   },
   {
     name: "The Enterprise Java Oracle",
-    emoji: "\u{1F3DB}\uFE0F",
+    img: "images/type-01.png",
     color: "#7eb8da",
     traits: ["Architecture Astronaut", "Layer Enthusiast", "14-Page Doc Writer"],
     desc: "You write a <strong>14-page Confluence doc</strong> to ask the model for a one-liner. Your prompts are refactored into 6 layers: Controller, Service, Repository, DTO, Mapper, and Trauma. You have an \"Architecture Review\" meeting for every AI interaction. <strong>The service layer is non-negotiable.</strong>"
   },
   {
     name: "The Moltbot Life-Automator",
-    emoji: "\u{1F916}",
+    img: "images/type-02.png",
     color: "#f4a460",
     traits: ["Bot Farmer", "Automation Addict", "Fragile Ecosystem Builder"],
     desc: "You have a bot to wake up, a bot to brush teeth, and a <strong>bot to apologize to friends</strong>. Your entire daily routine is a Rube Goldberg machine of automations. If one bot goes down, you become <strong>catatonic</strong> because you've literally forgotten how to do things manually."
   },
   {
     name: "The Toolcall Gremlin",
-    emoji: "\u{1F47A}",
+    img: "images/type-03.png",
     color: "#5cb85c",
     traits: ["Tool Maximalist", "JSON Whisperer", "Required: True"],
     desc: "Everything is a tool call. Even asking for water. Your debugging method is to <strong>add 9 more tools</strong>. You've wrapped your coffee maker in a REST API and your therapist is now a function with <code>required: true</code>. The tool calls have tool calls. <strong>It's tool calls all the way down.</strong>"
   },
   {
     name: "The Vibecoder Comet",
-    emoji: "\u{2604}\uFE0F",
+    img: "images/type-04.png",
     color: "#e74c3c",
     traits: ["Ship-First Mentality", "Test Allergic", "Production Debugger"],
     desc: "You prompt directly in prod. Unit tests? <strong>\"The users will tell us.\"</strong> You deploy with the confidence of someone who has never been on-call at 3 AM. Your code hasn't been reviewed since 2023, and you haven't made a decision on your own since then either. <strong>Move fast, break everything.</strong>"
   },
   {
     name: "The Research Paper Cosplayer",
-    emoji: "\u{1F4DA}",
+    img: "images/type-05.png",
     color: "#8e6f47",
     traits: ["Paper Implementer", "Function Name Poet", "Confident Incorrectness"],
     desc: "You name functions <code>latent_alignment_regularizer()</code> to feel something. You reimplement papers badly but <strong>with confidence</strong>. Your code is full of Greek letters and your README cites 47 arXiv papers. Nobody understands your code, including you, but it looks <strong>very academic.</strong>"
   },
   {
     name: "The Prompt Poet (Dark Arts)",
-    emoji: "\u{1F52E}",
+    img: "images/type-06.png",
     color: "#9b59b6",
     traits: ["Prompt Artisan", "Spell Writer", "Hallucination Warden"],
     desc: "You don't write code, you <strong>write spells</strong>. You've added \"DO NOT HALLUCINATE\" 47 times like it's a seatbelt. Your prompts are indistinguishable from ancient incantations, and you believe the exact wording of your system prompt affects <strong>the cosmic alignment of the tokens.</strong>"
   },
   {
     name: "The Security Paranoid Monk",
-    emoji: "\u{1F6E1}\uFE0F",
+    img: "images/type-07.png",
     color: "#607d8b",
     traits: ["Token Inspector", "Redaction Expert", "Fun Eliminator"],
     desc: "You treat every token like it's <strong>radioactive</strong>. You redact the prompt, the output, and the concept of fun. Your AI conversations go through 7 proxy layers and you've written a custom tokenizer just to inspect what's being sent. <strong>Trust no model. Trust no token.</strong>"
   },
   {
     name: "The Python Notebook Alchemist",
-    emoji: "\u{1F9EA}",
+    img: "images/type-08.png",
     color: "#f39c12",
     traits: ["Notebook Dweller", "Hidden State Sorcerer", "FINAL_v23 Expert"],
     desc: "Your production system is a notebook named <strong>FINAL_v23_REAL.py</strong>. State lives in vibes and hidden globals. You run cells out of order and call it \"exploration.\" The notebook has 847 cells and the output of cell 12 depends on cell 340. <strong>Only you can run it. Sometimes.</strong>"
   },
   {
     name: "The TypeScript Child of Destiny",
-    emoji: "\u{1F476}",
+    img: "images/type-09.png",
     color: "#3178c6",
     traits: ["Type Zealot", "Browser Inception", "Generics Philosopher"],
     desc: "You build an AI IDE inside a browser inside another browser. You cry at \"Type instantiation is <strong>excessively deep</strong>\" errors. Your type definitions are longer than your actual code, and you've spent 3 days on a generic type that makes <code>Pick&lt;Omit&lt;Partial&lt;T&gt;&gt;&gt;</code> look simple."
   },
   {
     name: "The LLM Evaluation Nerd",
-    emoji: "\u{1F4CA}",
+    img: "images/type-10.png",
     color: "#27ae60",
     traits: ["Benchmark Collector", "Rubric Architect", "Deploy Blocker"],
     desc: "You won't deploy until it beats <strong>12 datasets and 3 rubrics</strong>. You have a spreadsheet for the spreadsheet. Your eval suite takes longer to run than training the model. You've rejected production-ready models because they scored 94.7 instead of 94.8 on <strong>your custom rubric 3.2.</strong>"
   },
   {
     name: "The Model Polygamist",
-    emoji: "\u{1F465}",
+    img: "images/type-11.png",
     color: "#e67e22",
     traits: ["Multi-Model Juggler", "Blame Router", "Cosmic Ray Debugger"],
     desc: "You rotate between <strong>4 AIs</strong> like a cheating boyfriend who thinks he's running an \"optimization experiment.\" Push broken code, blame Claude. Revert, blame Gemini. Revert again, blame <strong>\"cosmic rays.\"</strong> Ship anyway. Your git log is a crime scene of model-hopping."
   },
   {
     name: "The 'I Don't Need AI' Boomer",
-    emoji: "\u{1F474}",
+    img: "images/type-12.png",
     color: "#95a5a6",
     traits: ["AI Denier", "Google Veteran", "Autocomplete Rebrander"],
     desc: "You call agents \"cheating\" while Googling for 3 hours. You eventually use AI but call it <strong>\"autocomplete.\"</strong> You say \"real engineers don't need AI\" from behind a stack of StackOverflow tabs. When the AI writes better code than you, it's because <strong>the problem was trivial anyway.</strong>"
   },
   {
     name: "The Startup Founder LARPer",
-    emoji: "\u{1F454}",
+    img: "images/type-13.png",
     color: "#e84393",
     traits: ["Pitch Deck Artist", "Platform Visionary", "MVP Theorist"],
     desc: "You pitch: \"It's like Uber but for prompts.\" You have no product, only a <strong>Notion board and a logo</strong>. Your slide deck is 90% arrows and the word <strong>\"PLATFORM\"</strong> in bold. The MVP is perpetually TBD. You've pivoted 6 times but the LinkedIn bio still says \"serial entrepreneur.\""
   },
   {
     name: "The Claude Skills Grifter",
-    emoji: "\u{1F3AD}",
+    img: "images/type-14.png",
     color: "#00b894",
     traits: ["Skill Crafter", "Esoteric Sigil Writer", "Grind Philosopher"],
     desc: "You write skills so esoteric they're basically <strong>sigils</strong>. \"How to make Claude write git commits in Shakespearean English while maintaining semantic versioning.\" 200 likes from people who will never use this. The grind continues. <strong>The people needed this.</strong>"
   },
   {
     name: "The RAG Hoarder",
-    emoji: "\u{1F4E6}",
+    img: "images/type-15.png",
     color: "#6c5ce7",
     traits: ["Context Maximalist", "Embedding Evangelist", "Downloads Folder Uploader"],
     desc: "You upload your entire Downloads folder and call it <strong>\"context.\"</strong> You say \"bro it's in the embeddings\" for everything. Your vector DB has your tax returns, vacation photos, and a PDF of your grandma's cookie recipe. If it exists, it must be <strong>embedded and retrievable.</strong>"
@@ -463,7 +570,6 @@ let currentQ = 0;
 let answers = [];
 
 function getTypeIndex(ans) {
-  // XOR-based linear map → 4-bit index (guaranteed even distribution)
   const bit0 = ans[0] ^ ans[4] ^ ans[8];
   const bit1 = ans[1] ^ ans[5] ^ ans[9];
   const bit2 = ans[2] ^ ans[6];
@@ -475,7 +581,7 @@ function renderStartScreen() {
   const grid = document.getElementById('type-grid');
   grid.innerHTML = TYPES.map(t =>
     `<div class="type-cell" style="background:${t.color}22;border-color:${t.color}44">
-       <span class="cell-emoji">${t.emoji}</span>
+       <img src="${t.img}" alt="${t.name}" loading="lazy">
        <span class="cell-name">${t.name.replace('The ', '')}</span>
      </div>`
   ).join('');
@@ -493,7 +599,6 @@ function startQuiz() {
 function showQuestion() {
   const card = document.getElementById('question-card');
   card.style.animation = 'none';
-  // Force reflow then restart animation
   void card.offsetHeight;
   card.style.animation = 'slideIn 0.4s ease';
 
@@ -525,15 +630,18 @@ function showResult() {
   resultDiv.innerHTML = `
     <div class="result-label">You are...</div>
     <div class="result-name" style="color:${t.color}">${t.name}</div>
-    <div class="result-portrait" style="background:${t.color}33">
-      <span>${t.emoji}</span>
+    <div class="result-portrait" style="border-color:${t.color}88">
+      <img src="${t.img}" alt="${t.name}">
     </div>
     <div class="result-traits">
       ${t.traits.map(tr => `<span class="trait-badge">${tr}</span>`).join('')}
     </div>
     <div class="result-description">${t.desc}</div>
-    <button class="btn-share" onclick="shareResult('${t.name.replace(/'/g, "\\'")}')">SHARE</button>
-    <button class="btn-restart" onclick="restart()">TRY AGAIN</button>
+    <div class="result-actions">
+      <button class="btn-share" onclick="shareResult('${t.name.replace(/'/g, "\\'")}')">SHARE</button>
+      <button class="btn-restart" onclick="restart()">TRY AGAIN</button>
+      <a class="btn-cheatsheet" href="cheatsheet.html">ALL TYPES</a>
+    </div>
   `;
 }
 

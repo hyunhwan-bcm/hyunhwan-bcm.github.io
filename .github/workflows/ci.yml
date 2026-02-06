@@ -15,24 +15,27 @@ jobs:
 
       - name: Check required files exist
         run: |
-          echo "Checking choose-your-fighter/index.html..."
-          test -f choose-your-fighter/index.html
-          echo "PASS: choose-your-fighter/index.html exists"
+          echo "Checking required files..."
+          test -f choose-your-fighter/index.html && echo "PASS: index.html"
+          test -f choose-your-fighter/cheatsheet.html && echo "PASS: cheatsheet.html"
+          for i in $(seq -w 0 15); do
+            test -f "choose-your-fighter/images/type-${i}.png" && echo "PASS: type-${i}.png"
+          done
+          echo "All required files exist."
 
       - name: Validate HTML structure
         run: |
-          FILE="choose-your-fighter/index.html"
-          echo "Validating HTML structure of $FILE..."
-
-          grep -q '<!DOCTYPE html>' "$FILE" && echo "PASS: DOCTYPE found" || { echo "FAIL: missing DOCTYPE"; exit 1; }
-          grep -q '<html' "$FILE" && echo "PASS: <html> tag found" || { echo "FAIL: missing <html>"; exit 1; }
-          grep -q '</html>' "$FILE" && echo "PASS: </html> closing tag found" || { echo "FAIL: missing </html>"; exit 1; }
-          grep -q '<head>' "$FILE" && echo "PASS: <head> found" || { echo "FAIL: missing <head>"; exit 1; }
-          grep -q '<body>' "$FILE" && echo "PASS: <body> found" || { echo "FAIL: missing <body>"; exit 1; }
-          grep -q '<title>' "$FILE" && echo "PASS: <title> found" || { echo "FAIL: missing <title>"; exit 1; }
-          grep -q 'meta.*viewport' "$FILE" && echo "PASS: viewport meta found" || { echo "FAIL: missing viewport meta"; exit 1; }
-
-          echo "All HTML structure checks passed."
+          for FILE in choose-your-fighter/index.html choose-your-fighter/cheatsheet.html; do
+            echo "Validating $FILE..."
+            grep -q '<!DOCTYPE html>' "$FILE" && echo "  PASS: DOCTYPE" || { echo "FAIL: missing DOCTYPE in $FILE"; exit 1; }
+            grep -q '<html' "$FILE" && echo "  PASS: <html>" || { echo "FAIL: missing <html> in $FILE"; exit 1; }
+            grep -q '</html>' "$FILE" && echo "  PASS: </html>" || { echo "FAIL: missing </html> in $FILE"; exit 1; }
+            grep -q '<head>' "$FILE" && echo "  PASS: <head>" || { echo "FAIL: missing <head> in $FILE"; exit 1; }
+            grep -q '<body>' "$FILE" && echo "  PASS: <body>" || { echo "FAIL: missing <body> in $FILE"; exit 1; }
+            grep -q '<title>' "$FILE" && echo "  PASS: <title>" || { echo "FAIL: missing <title> in $FILE"; exit 1; }
+            grep -q 'meta.*viewport' "$FILE" && echo "  PASS: viewport" || { echo "FAIL: missing viewport in $FILE"; exit 1; }
+          done
+          echo "All HTML checks passed."
 
   verify-distribution:
     name: Verify Quiz Distribution
