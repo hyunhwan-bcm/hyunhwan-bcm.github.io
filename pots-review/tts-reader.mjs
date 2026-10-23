@@ -9,8 +9,8 @@ reader.setAttribute('aria-label', 'Read aloud');
 reader.innerHTML = `
   <summary>Listen</summary>
   <div class="tts-reader-body">
-  <h2>Listen with Kokoro</h2>
-  <p class="tts-note" id="tts-note">Kokoro downloads about 90 MB on first use and generates each passage on this device. It can be slow on phones. Generated passages are saved for replay when browser storage is available.</p>
+  <h2>Read aloud</h2>
+  <p class="tts-note">Uses your phone or browser’s voice. Speed changes apply to the next passage.</p>
   <div class="tts-fields">
     <label>Read<select id="tts-scope"><option value="all">Whole review</option></select></label>
   </div>
@@ -26,7 +26,6 @@ reader.innerHTML = `
     <summary>Voice and reading options</summary>
     <div class="tts-fields">
       <label>Voice<select id="tts-voice"></select></label>
-      <label>Voice engine<select id="tts-engine"><option value="device">Device voice · quick start</option><option value="kokoro">Kokoro · slower on-device generation</option></select></label>
       <label>Speed<select id="tts-speed"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option></select></label>
     </div>
     <div class="tts-options">
@@ -34,9 +33,6 @@ reader.innerHTML = `
       <label><input type="checkbox" id="tts-follow">Follow along</label>
     </div>
   </details>
-  <button type="button" id="tts-fallback" class="tts-fallback" hidden>Use device voice instead</button>
-  <p class="tts-attribution"><a href="https://github.com/hexgrad/kokoro/tree/main/kokoro.js">Kokoro</a> · No text is sent to a TTS server in Kokoro mode.</p>
-  <audio id="tts-audio" preload="auto" hidden></audio>
   </div>`;
 main.querySelector('header').after(reader);
 const listenLink = document.createElement('a');
@@ -59,22 +55,11 @@ dock.innerHTML = `<span id="tts-dock-label"></span><div class="tts-actions">
 document.body.append(dock);
 
 const $ = id => document.getElementById(id);
-const fields = { scope: $('tts-scope'), engine: $('tts-engine'), voice: $('tts-voice'), speed: $('tts-speed') };
-const audio = $('tts-audio');
-let worker, initializePromise, initializeResolve, initializeReject, loadTimer;
-let modelReady = false, requestId = 0;
-const pending = new Map();
+const fields = { scope: $('tts-scope'), voice: $('tts-voice'), speed: $('tts-speed') };
 const gates = new Set();
 let state = { active: false, paused: false, run: 0, queue: [], index: 0, phase: 'idle' };
 let cancelPlayback;
 let highlighted;
-const kokoroVoices = [
-  ['af_heart', 'Heart · American English'],
-  ['af_bella', 'Bella · American English'],
-  ['am_michael', 'Michael · American English'],
-  ['bf_emma', 'Emma · British English'],
-];
-
 for (const section of sections) {
   fields.scope.add(new Option(section.title, section.id));
 
@@ -113,122 +98,9 @@ async function waitForResume(run) {
   return isCurrent(run);
 }
 
-function discardWorker() {
-  clearTimeout(loadTimer);
-  if (worker) { worker.onmessage = null; worker.onerror = null; worker.terminate(); worker = null; }
-  modelReady = false;
-  initializeReject?.(new Error('Canceled'));
-  initializeResolve = initializeReject = null; initializePromise = null;
-  for (const { reject, timer } of pending.values()) { clearTimeout(timer); reject(new Error('Canceled')); }
-  pending.clear();
-}
-function ensureKokoro() {
-  if (modelReady) return Promise.resolve();
-  if (initializePromise) return initializePromise;
-  if (!('Worker' in window)) return Promise.reject(new Error('Web workers are unavailable'));
-  initializePromise = new Promise((resolve, reject) => { initializeResolve = resolve; initializeReject = reject; });
-  worker = new Worker(new URL('./kokoro-worker.mjs?v=1', import.meta.url), { type: 'module' });
-  worker.onmessage = ({ data }) => {
-    if (data.type === 'progress') {
-      if (state.active && state.phase === 'loading') status(data.label);
-    } else if (data.type === 'ready') {
-      clearTimeout(loadTimer); modelReady = true;
-      initializeResolve?.(); initializeResolve = initializeReject = null;
-    } else if (data.type === 'audio' || data.type === 'error') {
-      if (data.id === 'init') { clearTimeout(loadTimer); initializeReject?.(new Error(data.message)); return; }
-      const task = pending.get(data.id);
-      if (!task) return;
-      pending.delete(data.id); clearTimeout(task.timer);
-      if (data.type === 'audio') {
-        reader.dataset.lastAudioBytes = String(data.blob.size);
-        task.resolve(data.blob);
-      } else task.reject(new Error(data.message));
-    }
-  };
-  worker.onerror = error => {
-    initializeReject?.(new Error(error.message || 'Kokoro worker failed'));
-    for (const { reject, timer } of pending.values()) { clearTimeout(timer); reject(new Error('Kokoro worker failed')); }
-    pending.clear();
-    if (modelReady) { modelReady = false; initializePromise = null; }
-  };
-  loadTimer = setTimeout(() => initializeReject?.(new Error('Model download timed out')), 300_000);
-  worker.postMessage({ type: 'initialize' });
-  return initializePromise;
-}
-async function generate(text, voice) {
-  // Cache by exact text and voice; changed manuscript passages get new keys.
-  let cache, cacheKey;
-  try {
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([voice, text])));
-    const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-    cacheKey = new URL(`./kokoro-audio-cache/v1/${hash}`, import.meta.url).href;
-    cache = await caches.open('pots-kokoro-audio-v1');
-    const saved = await cache.match(cacheKey);
-    if (saved) return saved.blob();
-  } catch { /* Storage is optional, including in private browsing. */ }
-  const blob = await new Promise((resolve, reject) => {
-    const id = ++requestId;
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error('Speech generation timed out')); }, 180_000);
-    pending.set(id, { resolve, reject, timer });
-    worker.postMessage({ type: 'generate', id, text, voice });
-  });
-  if (cache && cacheKey) {
-    try { await cache.put(cacheKey, new Response(blob, { headers: { 'Content-Type': blob.type || 'audio/wav' } })); } catch {}
-  }
-  return blob;
-}
-
-function playBlob(blob, run) {
-  return new Promise(resolve => {
-    const url = URL.createObjectURL(blob);
-    let done = false;
-    const finish = result => {
-      if (done) return; done = true;
-      audio.removeEventListener('ended', onEnd); audio.removeEventListener('error', onError);
-      if (cancelPlayback === cancel) cancelPlayback = null;
-      audio.pause(); audio.removeAttribute('src'); audio.load(); URL.revokeObjectURL(url);
-      resolve(result);
-    };
-    const onEnd = () => finish(null);
-    const onError = () => finish(new Error('Audio playback failed'));
-    const cancel = () => finish(null);
-    cancelPlayback = cancel;
-    audio.addEventListener('ended', onEnd); audio.addEventListener('error', onError);
-    audio.src = url; audio.playbackRate = Number(fields.speed.value); audio.preservesPitch = true;
-    audio.play().then(() => {
-      if (!isCurrent(run)) return cancel();
-      render('playing'); passageStatus();
-    }).catch(error => {
-      if (!isCurrent(run)) return cancel();
-      if (error.name === 'NotAllowedError') {
-        state.paused = true; render('paused'); status('Voice ready. Tap Play to start audio.');
-      } else finish(error);
-    });
-  });
-}
 function passageStatus() {
   const segment = state.queue[state.index];
   if (segment) status(`${state.paused ? 'Paused · ' : ''}${segment.section.title} · Passage ${state.index + 1} of ${state.queue.length}`);
-}
-async function kokoroLoop(run, voice) {
-  render('loading'); status(modelReady ? 'Preparing the first passage…' : 'Loading Kokoro. First download: about 90 MB…');
-  await ensureKokoro();
-  if (!isCurrent(run)) return;
-  // Capture prefetch failures as values so stopping never leaves an unhandled rejection.
-  const request = index => generate(state.queue[index].text, voice).then(blob => ({ blob }), error => ({ error }));
-  let next = request(state.index);
-  for (; isCurrent(run) && state.index < state.queue.length; state.index++) {
-    render(state.paused ? 'paused' : 'generating');
-    if (!state.paused) status(`Preparing passage ${state.index + 1} of ${state.queue.length}…`);
-    const result = await next;
-    if (!isCurrent(run)) return;
-    if (result.error) throw result.error;
-    next = state.index + 1 < state.queue.length ? request(state.index + 1) : null;
-    if (!await waitForResume(run)) return;
-    mark(state.queue[state.index]);
-    const error = await playBlob(result.blob, run);
-    if (error) throw error;
-  }
 }
 function speak(segment, run) {
   return new Promise(resolve => {
@@ -263,14 +135,12 @@ function finishReading(run) {
 function stop(announce = true) {
   state.run++; state.active = false; state.paused = false;
   releaseGates(); cancelPlayback?.();
-  audio.pause();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
-  if (worker && !modelReady) discardWorker();
   clearHighlight(); render('idle');
   if (announce) { $('tts-progress').value = 0; status('Stopped. Press Read to restart the selected text.'); }
 }
 function start(queue = null, index = 0) {
-  stop(false); $('tts-fallback').hidden = true;
+  stop(false);
   state.queue = queue || readingQueue(main, fields.scope.value, $('tts-comparisons').checked);
   if (!state.queue.length) { status('No readable text in this section.'); return; }
   state.index = index; state.active = true; state.paused = false;
@@ -278,36 +148,24 @@ function start(queue = null, index = 0) {
   try {
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Pediatric POTS research review', artist: 'Read aloud' });
   } catch {}
-  const task = fields.engine.value === 'kokoro' ? kokoroLoop(run, fields.voice.value) : deviceLoop(run);
+  const task = deviceLoop(run);
   task.then(() => finishReading(run)).catch(error => {
     if (!isCurrent(run)) return;
     console.error('Read-aloud error:', error);
-    const engine = fields.engine.value;
     stop(false);
-    if (engine === 'kokoro') {
-      discardWorker();
-      status('Kokoro could not prepare audio. Check your connection and retry, or use a device voice.');
-      $('tts-fallback').hidden = !('speechSynthesis' in window);
-    } else status('Device speech is unavailable in this browser. Try Kokoro or another browser.');
+    status('Device speech is unavailable. Try another browser or an installed voice.');
     render('error');
   });
 }
 function toggle() {
   if (!state.active) return start();
-  if (!state.paused) {
-    state.paused = true; audio.pause();
-    if (fields.engine.value === 'device' && 'speechSynthesis' in window) speechSynthesis.pause();
-    render('paused'); passageStatus();
-  } else {
-    state.paused = false;
-    // Keep play() in the tap handler for browsers that require user activation.
-    if (fields.engine.value === 'kokoro' && audio.hasAttribute('src')) {
-      audio.play().then(() => { if (state.active) { render('playing'); passageStatus(); } }).catch(() => {
-        if (state.active) { state.paused = true; render('paused'); status('Tap Play again to allow audio in this browser.'); }
-      });
-    } else if (fields.engine.value === 'device') speechSynthesis.resume();
-    releaseGates(); render('playing'); passageStatus();
+  state.paused = !state.paused;
+  if ('speechSynthesis' in window) {
+    if (state.paused) speechSynthesis.pause();
+    else speechSynthesis.resume();
   }
+  if (!state.paused) releaseGates();
+  render(state.paused ? 'paused' : 'playing'); passageStatus();
 }
 function jump(delta) {
   if (!state.active) return;
@@ -316,16 +174,9 @@ function jump(delta) {
 }
 function updateVoices() {
   const previous = fields.voice.value; fields.voice.replaceChildren();
-  reader.querySelector('h2').textContent = fields.engine.value === 'kokoro' ? 'Listen with Kokoro' : 'Listen with device voice';
-  if (fields.engine.value === 'kokoro') {
-    for (const [id, name] of kokoroVoices) fields.voice.add(new Option(name, id));
-    $('tts-note').textContent = 'Kokoro downloads about 90 MB on first use and generates each passage on this device. It can be slow on phones. Generated passages are saved for replay when browser storage is available.';
-  } else {
-    $('tts-note').textContent = 'Quick start with your phone or browser’s voice; no Kokoro model download or generation. Speed changes apply to the next passage.';
-    const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices().filter(v => /^en\b/i.test(v.lang)) : [];
-    fields.voice.add(new Option('Default English voice', ''));
-    for (const voice of voices) fields.voice.add(new Option(`${voice.name} · ${voice.lang}`, voice.voiceURI));
-  }
+  const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices().filter(v => /^en\b/i.test(v.lang)) : [];
+  fields.voice.add(new Option('Default English voice', ''));
+  for (const voice of voices) fields.voice.add(new Option(`${voice.name} · ${voice.lang}`, voice.voiceURI));
   if ([...fields.voice.options].some(o => o.value === previous)) fields.voice.value = previous;
 }
 for (const button of document.querySelectorAll('[data-tts]')) {
@@ -336,14 +187,12 @@ for (const button of document.querySelectorAll('[data-tts]')) {
     else jump(action === 'previous' ? -1 : 1);
   });
 }
-for (const field of [fields.scope, fields.engine, $('tts-comparisons')]) field.addEventListener('change', () => { stop(false); updateVoices(); status('Ready. Press Read to start the selected text.'); $('tts-fallback').hidden = true; });
-fields.speed.addEventListener('change', () => { audio.playbackRate = Number(fields.speed.value); });
-$('tts-fallback').addEventListener('click', () => { fields.engine.value = 'device'; updateVoices(); start(); });
-if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', () => { if (fields.engine.value === 'device') updateVoices(); });
+for (const field of [fields.scope, $('tts-comparisons')]) field.addEventListener('change', () => { stop(false); status('Ready. Press Read to start the selected text.'); });
+if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', () => { if (!state.active) updateVoices(); });
 if ('mediaSession' in navigator) {
   for (const [action, callback] of Object.entries({ play: () => { if (state.paused || !state.active) toggle(); }, pause: () => { if (state.active && !state.paused) toggle(); }, stop, nexttrack: () => jump(1), previoustrack: () => jump(-1) })) {
     try { navigator.mediaSession.setActionHandler(action, callback); } catch {}
   }
 }
-window.addEventListener('pagehide', () => { stop(false); discardWorker(); });
+window.addEventListener('pagehide', () => stop(false));
 updateVoices(); render();
