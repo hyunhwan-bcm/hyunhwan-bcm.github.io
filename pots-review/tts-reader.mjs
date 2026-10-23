@@ -2,11 +2,13 @@ import { readingSections, readingQueue } from './tts-core.mjs';
 
 const main = document.querySelector('main');
 const sections = readingSections(main);
-const reader = document.createElement('aside');
+const reader = document.createElement('details');
 reader.className = 'tts-reader';
 reader.id = 'listen';
 reader.setAttribute('aria-label', 'Read aloud');
 reader.innerHTML = `
+  <summary>Listen</summary>
+  <div class="tts-reader-body">
   <h2>Listen with Kokoro</h2>
   <p class="tts-note" id="tts-note">First use downloads a voice model (about 90 MB). Speech is generated on this device. The initial start can take a moment.</p>
   <div class="tts-fields">
@@ -34,11 +36,16 @@ reader.innerHTML = `
   </details>
   <button type="button" id="tts-fallback" class="tts-fallback" hidden>Use device voice instead</button>
   <p class="tts-attribution"><a href="https://github.com/hexgrad/kokoro/tree/main/kokoro.js">Kokoro</a> · No text is sent to a TTS server in Kokoro mode.</p>
-  <audio id="tts-audio" preload="auto" hidden></audio>`;
+  <audio id="tts-audio" preload="auto" hidden></audio>
+  </div>`;
 main.querySelector('header').after(reader);
 const listenLink = document.createElement('a');
 listenLink.href = '#listen'; listenLink.textContent = 'Listen';
 listenLink.setAttribute('aria-label', 'Open read-aloud controls');
+listenLink.addEventListener('click', () => { reader.open = true; });
+const openFromHash = () => { if (location.hash === '#listen') reader.open = true; };
+window.addEventListener('hashchange', openFromHash);
+openFromHash();
 const readerbar = document.querySelector('.readerbar');
 readerbar.querySelector('a').textContent = 'POTS review';
 readerbar.querySelector('.size-controls').before(listenLink);
@@ -70,11 +77,7 @@ const kokoroVoices = [
 
 for (const section of sections) {
   fields.scope.add(new Option(section.title, section.id));
-  const listen = document.createElement('button');
-  listen.type = 'button'; listen.className = 'tts-section-button'; listen.textContent = 'Listen';
-  listen.setAttribute('aria-label', `Listen to ${section.title}`);
-  listen.addEventListener('click', () => { stop(false); fields.scope.value = section.id; start(); });
-  section.heading.append(listen);
+
 }
 
 function status(message) { $('tts-status').textContent = message; $('tts-dock-label').textContent = message; }

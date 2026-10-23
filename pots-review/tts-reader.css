@@ -1,4 +1,6 @@
-.tts-reader{margin:1.2rem 0;padding:1rem;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:.65rem;background:var(--paper);scroll-margin-top:5rem}
+.tts-reader{margin:.35rem 0 .8rem;padding:0;border:0;background:transparent;scroll-margin-top:5rem}
+.tts-reader>summary{width:fit-content;min-height:44px;display:list-item;align-content:center;cursor:pointer;font-size:.85rem;color:var(--muted);padding:.5rem .2rem}
+.tts-reader-body{padding:.9rem;border:1px solid var(--line);border-radius:.5rem;background:var(--paper)}
 .tts-reader h2{font-size:1.1rem;margin:0 0 .4rem;padding:0;border:0}
 .tts-note{font-size:.83rem;color:var(--muted);line-height:1.5;margin:0 0 .8rem}
 .tts-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;min-width:0}
