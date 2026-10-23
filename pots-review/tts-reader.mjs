@@ -10,7 +10,7 @@ reader.innerHTML = `
   <summary>Listen</summary>
   <div class="tts-reader-body">
   <h2>Listen with Kokoro</h2>
-  <p class="tts-note" id="tts-note">First use downloads a voice model (about 90 MB). Speech is generated on this device. The initial start can take a moment.</p>
+  <p class="tts-note" id="tts-note">Kokoro downloads about 90 MB on first use and generates each passage on this device. It can be slow on phones. Generated passages are saved for replay when browser storage is available.</p>
   <div class="tts-fields">
     <label>Read<select id="tts-scope"><option value="all">Whole review</option></select></label>
   </div>
@@ -26,7 +26,7 @@ reader.innerHTML = `
     <summary>Voice and reading options</summary>
     <div class="tts-fields">
       <label>Voice<select id="tts-voice"></select></label>
-      <label>Voice engine<select id="tts-engine"><option value="kokoro">Kokoro</option><option value="device">Device voice</option></select></label>
+      <label>Voice engine<select id="tts-engine"><option value="device">Device voice · quick start</option><option value="kokoro">Kokoro · slower on-device generation</option></select></label>
       <label>Speed<select id="tts-speed"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option></select></label>
     </div>
     <div class="tts-options">
@@ -155,13 +155,27 @@ function ensureKokoro() {
   worker.postMessage({ type: 'initialize' });
   return initializePromise;
 }
-function generate(text, voice) {
-  return new Promise((resolve, reject) => {
+async function generate(text, voice) {
+  // Cache by exact text and voice; changed manuscript passages get new keys.
+  let cache, cacheKey;
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([voice, text])));
+    const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+    cacheKey = new URL(`./kokoro-audio-cache/v1/${hash}`, import.meta.url).href;
+    cache = await caches.open('pots-kokoro-audio-v1');
+    const saved = await cache.match(cacheKey);
+    if (saved) return saved.blob();
+  } catch { /* Storage is optional, including in private browsing. */ }
+  const blob = await new Promise((resolve, reject) => {
     const id = ++requestId;
     const timer = setTimeout(() => { pending.delete(id); reject(new Error('Speech generation timed out')); }, 180_000);
     pending.set(id, { resolve, reject, timer });
     worker.postMessage({ type: 'generate', id, text, voice });
   });
+  if (cache && cacheKey) {
+    try { await cache.put(cacheKey, new Response(blob, { headers: { 'Content-Type': blob.type || 'audio/wav' } })); } catch {}
+  }
+  return blob;
 }
 
 function playBlob(blob, run) {
@@ -305,9 +319,9 @@ function updateVoices() {
   reader.querySelector('h2').textContent = fields.engine.value === 'kokoro' ? 'Listen with Kokoro' : 'Listen with device voice';
   if (fields.engine.value === 'kokoro') {
     for (const [id, name] of kokoroVoices) fields.voice.add(new Option(name, id));
-    $('tts-note').textContent = 'First use downloads a voice model (about 90 MB). Speech is generated on this device. The initial start can take a moment.';
+    $('tts-note').textContent = 'Kokoro downloads about 90 MB on first use and generates each passage on this device. It can be slow on phones. Generated passages are saved for replay when browser storage is available.';
   } else {
-    $('tts-note').textContent = 'Uses your phone or browser’s installed voice. Speed changes apply to the next passage.';
+    $('tts-note').textContent = 'Quick start with your phone or browser’s voice; no Kokoro model download or generation. Speed changes apply to the next passage.';
     const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices().filter(v => /^en\b/i.test(v.lang)) : [];
     fields.voice.add(new Option('Default English voice', ''));
     for (const voice of voices) fields.voice.add(new Option(`${voice.name} · ${voice.lang}`, voice.voiceURI));
