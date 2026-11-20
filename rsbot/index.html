@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rsbot chat</title>
+<meta name="description" content="PyBot, the rule-based chatbot, ported exactly to Rust and running in your browser as WebAssembly.">
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --surface: #fcfcfb; --panel: #ffffff; --line: #e6e5e0;
+    --text: #1f1f1e; --muted: #6b6a63;
+    --user-bg: #2a78d6; --user-text: #ffffff;
+    --bot-bg: #f1f0ec; --bot-text: #1f1f1e;
+    --accent: #2a78d6; --error: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --surface: #1a1a19; --panel: #222220; --line: #34332f;
+      --text: #f0efec; --muted: #a3a29a;
+      --user-bg: #3987e5; --user-text: #ffffff;
+      --bot-bg: #2c2c29; --bot-text: #f0efec;
+      --accent: #3987e5; --error: #f2b8b5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--surface); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; flex: 1; min-width: 200px; }
+  header a { color: inherit; }
+  header button {
+    background: none; border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  header button:hover:not(:disabled) { border-color: var(--muted); }
+  header button:disabled { opacity: .5; cursor: default; }
+  main { flex: 1; overflow-y: auto; padding: 16px; }
+  .log { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bot-bg); color: var(--bot-text); border-bottom-left-radius: 4px; }
+  .meta { align-self: flex-start; color: var(--muted); font-size: 12px; margin: -6px 0 2px 6px; }
+  .meta.error { color: var(--error); }
+  .empty { color: var(--muted); text-align: center; margin-top: 15vh; }
+  .loading { max-width: 360px; margin: 15vh auto 0; text-align: center; color: var(--muted); }
+  .loading p { margin: 0 0 10px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .loading small { display: block; margin-top: 10px; font-size: 13px; }
+  .loading.error p { color: var(--error); }
+  form {
+    display: flex; gap: 8px; padding: 12px 16px 6px; border-top: 1px solid var(--line);
+    max-width: 792px; width: 100%; margin: 0 auto;
+  }
+  textarea {
+    flex: 1; resize: none; min-height: 44px; max-height: 160px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text);
+    font: inherit;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  form button {
+    border: 0; border-radius: 12px; padding: 0 18px; background: var(--accent); color: #fff;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  form button:disabled { opacity: .5; cursor: default; }
+  footer { max-width: 792px; width: 100%; margin: 0 auto; padding: 0 16px 10px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>rsbot</h1>
+  <p><a href="https://github.com/huggingface/pybot">PyBot</a>, the rule-based chatbot, ported exactly to Rust and running in your browser. No model, no weights: every reply comes from if-else rules, regexes and tables.</p>
+  <button id="reset" type="button" title="Start a new conversation" disabled>New chat</button>
+</header>
+<main id="scroll">
+  <div class="log" id="log">
+    <div class="loading" id="loading" role="status" aria-live="polite">
+      <p id="status">Downloading the bot</p>
+      <div class="bar"><span id="bar"></span></div>
+      <small id="detail">The bot and its data are about 17 MB, downloaded once.</small>
+    </div>
+  </div>
+</main>
+<form id="form">
+  <textarea id="text" rows="1" placeholder="Type a message" aria-label="Message" disabled></textarea>
+  <button id="send" type="submit" disabled>Send</button>
+</form>
+<footer>Runs entirely in this page as WebAssembly: nothing you type is sent anywhere.</footer>
+<script>
+  const log = document.getElementById("log"), scroll = document.getElementById("scroll");
+  const form = document.getElementById("form"), input = document.getElementById("text"), send = document.getElementById("send");
+  const reset = document.getElementById("reset");
+  const worker = new Worker("worker.js");
+  let ready = false, waiting = false;
+
+  const mb = (n) => (n / 1e6).toFixed(1) + " MB";
+  function setLoading(status, detail, fraction) {
+    const box = document.getElementById("loading");
+    if (!box) return;
+    if (status !== null) document.getElementById("status").textContent = status;
+    if (detail !== null) document.getElementById("detail").textContent = detail;
+    if (fraction !== null) document.getElementById("bar").style.width = Math.min(100, fraction * 100).toFixed(1) + "%";
+  }
+  function add(cls, text) {
+    document.getElementById("empty")?.remove();
+    const el = document.createElement("div");
+    el.className = cls; el.textContent = text;
+    log.appendChild(el);
+    scroll.scrollTop = scroll.scrollHeight;
+    return el;
+  }
+  function setBusy(busy) {
+    waiting = busy;
+    send.disabled = busy || !ready;
+  }
+
+  worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === "progress") {
+      setLoading("Downloading the bot", `${mb(m.loaded)} of ${mb(m.total)}`, m.loaded / m.total);
+    } else if (m.type === "status") {
+      setLoading(m.text + "…", "", 1);
+    } else if (m.type === "ready") {
+      ready = true;
+      log.innerHTML = '<p class="empty" id="empty">Say hello, ask for a recipe, or tell it about your day.</p>';
+      input.disabled = false; reset.disabled = false; setBusy(false);
+      input.focus();
+      console.log(`rsbot ready in ${m.ms} ms, ${m.memoryMB} MB of WebAssembly memory`);
+    } else if (m.type === "reply") {
+      add("msg bot", m.reply);
+      add("meta", `${m.module ?? "fallback"} · ${m.ms} ms`);
+      setBusy(false); input.focus();
+    } else if (m.type === "error") {
+      if (!ready) {
+        document.getElementById("loading")?.classList.add("error");
+        setLoading("The bot could not start", m.text, null);
+      } else {
+        add("meta error", "The bot stopped: " + m.text + ". Reload the page to start again.");
+        ready = false; input.disabled = true; reset.disabled = true; setBusy(false);
+      }
+    }
+  };
+  worker.onerror = (e) => {
+    if (!ready) setLoading("The bot could not start", e.message || "the worker failed", null);
+  };
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text || !ready || waiting) return;
+    input.value = ""; input.style.height = "";
+    add("msg user", text);
+    setBusy(true);
+    worker.postMessage({ type: "chat", text });
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
+  });
+  input.addEventListener("input", () => { input.style.height = ""; input.style.height = input.scrollHeight + "px"; });
+  reset.addEventListener("click", () => {
+    if (!ready || waiting) return;
+    worker.postMessage({ type: "reset" });
+    log.innerHTML = '<p class="empty" id="empty">New conversation. Say hello.</p>';
+    input.focus();
+  });
+</script>
+</body>
+</html>
